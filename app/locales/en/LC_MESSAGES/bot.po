@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: bot 0.1\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2025-04-30 08:19+0500\n"
+"POT-Creation-Date: 2025-08-20 09:36+0500\n"
 "PO-Revision-Date: 2024-12-05 10:24+0500\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: en\n"
@@ -1162,6 +1162,14 @@ msgstr ""
 "✅ <b>Payment successful!</b>\n"
 "\n"
 "Your subscription has been updated to {device} and {duration}."
+
+#: app/bot/tasks/subscription_expiry.py:55
+msgid "task:message:subscription_expiry"
+msgstr ""
+"⚠️ <b>Your subscription will expire soon!</b>\n"
+"\n"
+"Devices: {devices}\n"
+"Expires in: {expiry_time}"
 
 #: app/bot/utils/formatting.py:18 app/bot/utils/formatting.py:20
 #: app/bot/utils/formatting.py:28

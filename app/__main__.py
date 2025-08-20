@@ -37,7 +37,13 @@ async def on_shutdown(db: Database, bot: Bot, services: ServicesContainer) -> No
     logging.info("Bot stopped.")
 
 
-async def on_startup(config: Config, bot: Bot, services: ServicesContainer, db: Database) -> None:
+async def on_startup(
+    config: Config,
+    bot: Bot,
+    services: ServicesContainer,
+    db: Database,
+    storage: RedisStorage,
+) -> None:
     webhook_url = urljoin(config.bot.DOMAIN, TELEGRAM_WEBHOOK)
 
     if await bot.get_webhook_info() != webhook_url:
@@ -54,6 +60,12 @@ async def on_startup(config: Config, bot: Bot, services: ServicesContainer, db: 
         tasks.referral.start_scheduler(
             session_factory=db.session, referral_service=services.referral
         )
+    tasks.subscription_expiry.start_scheduler(
+        session_factory=db.session,
+        storage=storage,
+        vpn_service=services.vpn,
+        notification_service=services.notification,
+    )
 
 
 async def main() -> None:
@@ -77,15 +89,25 @@ async def main() -> None:
     # Initialize the bot with the token and default properties
     bot = Bot(
         token=config.bot.TOKEN,
-        default=DefaultBotProperties(parse_mode=ParseMode.HTML, link_preview_is_disabled=True),
+        default=DefaultBotProperties(
+            parse_mode=ParseMode.HTML, link_preview_is_disabled=True
+        ),
     )
 
     # Set up internationalization (i18n)
-    i18n = I18n(path=DEFAULT_LOCALES_DIR, default_locale=DEFAULT_LANGUAGE, domain=I18N_DOMAIN)
+    i18n = I18n(
+        path=DEFAULT_LOCALES_DIR,
+        default_locale=DEFAULT_LANGUAGE,
+        domain=I18N_DOMAIN,
+    )
     I18n.set_current(i18n)
 
     # Initialize services
-    services_container = await services.initialize(config=config, session=db.session, bot=bot)
+    services_container = await services.initialize(
+        config=config,
+        session=db.session,
+        bot=bot,
+    )
 
     # Sync servers
     await services_container.server_pool.sync_servers()
