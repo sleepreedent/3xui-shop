@@ -10,6 +10,7 @@ from aiogram.fsm.storage.redis import RedisStorage
 from aiogram.utils.i18n import I18n
 from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_application
 from aiohttp.web import Application, _run_app
+from redis.asyncio.client import Redis
 
 from app import logger
 from app.bot import filters, middlewares, routers, services, tasks
@@ -42,7 +43,8 @@ async def on_startup(
     bot: Bot,
     services: ServicesContainer,
     db: Database,
-    storage: RedisStorage,
+    redis: Redis,
+    i18n: I18n,
 ) -> None:
     webhook_url = urljoin(config.bot.DOMAIN, TELEGRAM_WEBHOOK)
 
@@ -62,7 +64,8 @@ async def on_startup(
         )
     tasks.subscription_expiry.start_scheduler(
         session_factory=db.session,
-        storage=storage,
+        redis=redis,
+        i18n=i18n,
         vpn_service=services.vpn,
         notification_service=services.notification,
     )
@@ -132,6 +135,8 @@ async def main() -> None:
         bot=bot,
         services=services_container,
         gateway_factory=gateway_factory,
+        redis=storage.redis,
+        i18n=i18n,
     )
 
     # Register event handlers
