@@ -947,6 +947,10 @@ msgstr "💳 Extend subscription"
 msgid "subscription:button:activate_promocode"
 msgstr "🎟️ Activate promocode"
 
+#: app/bot/routers/subscription/keyboard.py:84
+msgid "subscription:button:change_server"
+msgstr "◀️ Change server"
+
 #: app/bot/routers/subscription/keyboard.py:111
 msgid "subscription:button:change_devices"
 msgstr "◀️ Change number of devices"
@@ -1070,10 +1074,20 @@ msgstr "⏳ <b>Specify the duration:</b>"
 msgid "subscription:message:devices"
 msgstr "📱 <b>Select the number of devices:</b>"
 
+#: app/bot/routers/subscription/subscription_handler.py:164
+#: app/bot/routers/subscription/subscription_handler.py:200
+msgid "subscription:message:server"
+msgstr "🌐 <b>Select a server:</b>\n\nChoose the server you want to use for your subscription."
+
 #: app/bot/routers/subscription/subscription_handler.py:138
 #: app/bot/routers/subscription/trial_handler.py:35
 msgid "subscription:popup:no_available_servers"
 msgstr "❌ No available servers found. Please try again later."
+
+#: app/bot/routers/subscription/subscription_handler.py:189
+#: app/bot/routers/subscription/subscription_handler.py:215
+msgid "subscription:popup:server_unavailable"
+msgstr "❌ The selected server is no longer available. Please choose another one."
 
 #: app/bot/routers/subscription/subscription_handler.py:181
 msgid "subscription:message:payment_method"

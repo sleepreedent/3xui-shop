@@ -125,37 +125,75 @@ class ServerPoolService:
 
         logger.info(f"Sync complete. Currently active servers: {len(self._servers)}")
 
-    async def assign_server_to_user(self, user: User) -> None:
-        async with self.session() as session:
+    async def assign_server_to_user(self, user: User, server_id: int | None = None) -> Server | None:
+        if server_id is not None:
+            await self.sync_servers()
+            connection = self._servers.get(server_id)
+
+            if not connection:
+                logger.error(
+                    f"Server {server_id} is not available in pool for user {user.tg_id}."
+                )
+                server = await self.get_available_server()
+
+                if not server:
+                    return None
+            else:
+                server = connection.server
+        else:
             server = await self.get_available_server()
-            user.server_id = server.id
+
+            if not server:
+                return None
+
+        user.server_id = server.id
+
+        async with self.session() as session:
             await User.update(session=session, tg_id=user.tg_id, server_id=server.id)
 
-    async def get_available_server(self) -> Server | None:
+        logger.debug(f"Assigned server {server.name} to user {user.tg_id}.")
+        return server
+
+    async def get_available_servers(self) -> list[Server]:
         await self.sync_servers()
 
+        servers = sorted(
+            (conn.server for conn in self._servers.values()),
+            key=lambda server: (server.current_clients, server.id),
+        )
+
+        logger.debug(
+            "Available servers in pool: %s",
+            [
+                f"{server.name} ({server.current_clients}/{server.max_clients})"
+                for server in servers
+            ],
+        )
+
+        return servers
+
+    async def get_available_server(self) -> Server | None:
+        servers = await self.get_available_servers()
+
+        if not servers:
+            logger.critical("No available servers found in pool")
+            return None
+
         servers_with_free_slots = [
-            conn.server
-            for conn in self._servers.values()
-            if conn.server.current_clients < conn.server.max_clients
+            server for server in servers if server.current_clients < server.max_clients
         ]
 
         if servers_with_free_slots:
-            server = sorted(servers_with_free_slots, key=lambda s: s.current_clients)[0]
+            server = servers_with_free_slots[0]
             logger.debug(
                 f"Found server with free slots: {server.name} "
                 f"(clients: {server.current_clients}/{server.max_clients})"
             )
             return server
 
-        servers_least_loaded = [conn.server for conn in self._servers.values()]
-        if servers_least_loaded:
-            server = sorted(servers_least_loaded, key=lambda s: s.current_clients)[0]
-            logger.warning(
-                f"No servers with free slots. Using least loaded server: {server.name} "
-                f"(clients: {server.current_clients}/{server.max_clients})"
-            )
-            return server
-
-        logger.critical("No available servers found in pool")
-        return None
+        server = servers[0]
+        logger.warning(
+            f"No servers with free slots. Using least loaded server: {server.name} "
+            f"(clients: {server.current_clients}/{server.max_clients})"
+        )
+        return server

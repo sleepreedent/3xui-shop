@@ -137,6 +137,7 @@ class VPNService:
         user: User,
         devices: int,
         duration: int,
+        server_id: int | None = None,
         enable: bool = True,
         flow: str = "xtls-rprx-vision",
         total_gb: int = 0,
@@ -144,7 +145,14 @@ class VPNService:
     ) -> bool:
         logger.info(f"Creating new client {user.tg_id} | {devices} devices {duration} days.")
 
-        await self.server_pool_service.assign_server_to_user(user)
+        assigned_server = await self.server_pool_service.assign_server_to_user(
+            user=user, server_id=server_id
+        )
+
+        if not assigned_server:
+            logger.error(f"Failed to assign server for user {user.tg_id}.")
+            return False
+
         connection = await self.server_pool_service.get_connection(user)
 
         if not connection:
@@ -222,9 +230,16 @@ class VPNService:
             logger.error(f"Error updating client {user.tg_id}: {exception}")
             return False
 
-    async def create_subscription(self, user: User, devices: int, duration: int) -> bool:
+    async def create_subscription(
+        self, user: User, devices: int, duration: int, server_id: int | None = None
+    ) -> bool:
         if not await self.is_client_exists(user):
-            return await self.create_client(user=user, devices=devices, duration=duration)
+            return await self.create_client(
+                user=user,
+                devices=devices,
+                duration=duration,
+                server_id=server_id,
+            )
         return False
 
     async def extend_subscription(self, user: User, devices: int, duration: int) -> bool:

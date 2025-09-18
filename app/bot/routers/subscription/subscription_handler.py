@@ -16,6 +16,7 @@ from .keyboard import (
     devices_keyboard,
     duration_keyboard,
     payment_method_keyboard,
+    server_keyboard,
     subscription_keyboard,
 )
 
@@ -130,13 +131,99 @@ async def callback_subscription_process(
     services: ServicesContainer,
 ) -> None:
     logger.info(f"User {user.tg_id} started subscription process.")
-    server = await services.server_pool.get_available_server()
+    servers = await services.server_pool.get_available_servers()
 
-    if not server:
+    if not servers:
         await services.notification.show_popup(
             callback=callback,
             text=_("subscription:popup:no_available_servers"),
             cache_time=120,
+        )
+        return
+
+    if callback_data.server_id:
+        selected_server = next(
+            (server for server in servers if server.id == callback_data.server_id),
+            None,
+        )
+
+        if selected_server:
+            logger.debug(
+                "User %s continues with server %s.",
+                user.tg_id,
+                selected_server.name,
+            )
+            callback_data.state = NavSubscription.DEVICES
+            await callback.message.edit_text(
+                text=_("subscription:message:devices"),
+                reply_markup=devices_keyboard(
+                    services.plan.get_all_plans(), callback_data
+                ),
+            )
+            return
+
+        logger.warning(
+            "Previously selected server %s is no longer available for user %s.",
+            callback_data.server_id,
+            user.tg_id,
+        )
+        callback_data.server_id = 0
+
+        await services.notification.show_popup(
+            callback=callback,
+            text=_("subscription:popup:server_unavailable"),
+        )
+
+    callback_data.state = NavSubscription.SERVER
+    await callback.message.edit_text(
+        text=_("subscription:message:server"),
+        reply_markup=server_keyboard(servers, callback_data),
+    )
+
+
+@router.callback_query(SubscriptionData.filter(F.state == NavSubscription.SERVER))
+async def callback_server_selected(
+    callback: CallbackQuery,
+    user: User,
+    callback_data: SubscriptionData,
+    services: ServicesContainer,
+) -> None:
+    logger.info(
+        "User %s selected server with id %s.",
+        user.tg_id,
+        callback_data.server_id,
+    )
+
+    servers = await services.server_pool.get_available_servers()
+
+    if not callback_data.server_id:
+        callback_data.state = NavSubscription.SERVER
+        await callback.message.edit_text(
+            text=_("subscription:message:server"),
+            reply_markup=server_keyboard(servers, callback_data),
+        )
+        return
+
+    selected_server = next(
+        (server for server in servers if server.id == callback_data.server_id),
+        None,
+    )
+
+    if not selected_server:
+        logger.warning(
+            "Server %s is no longer available for user %s.",
+            callback_data.server_id,
+            user.tg_id,
+        )
+        callback_data.server_id = 0
+        await services.notification.show_popup(
+            callback=callback,
+            text=_("subscription:popup:server_unavailable"),
+        )
+        callback_data.state = NavSubscription.SERVER
+        await callback.message.edit_text(
+            text=_("subscription:message:server"),
+            reply_markup=server_keyboard(servers, callback_data),
         )
         return
 

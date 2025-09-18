@@ -133,6 +133,7 @@ class PaymentGateway(ABC):
                     user=user,
                     devices=data.devices,
                     duration=data.duration,
+                    server_id=data.server_id or None,
                 )
                 logger.info(f"Subscription created for user {user.tg_id}")
                 key = await self.services.vpn.get_key(user)
