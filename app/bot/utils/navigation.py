@@ -37,6 +37,7 @@ class NavSubscription(str, Enum):
     CHANGE = "change"
     EXTEND = "extend"
     PROCESS = "process"
+    SERVER = "server"
     DEVICES = "devices"
     DURATION = "duration"
     PROMOCODE = "promocode"

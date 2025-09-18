@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from app.bot.services import PlanService
+    from app.db.models import Server
 
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.utils.i18n import gettext as _
@@ -75,6 +76,49 @@ def devices_keyboard(
         )
 
     builder.adjust(2)
+    previous_state = callback_data.state
+    previous_server_id = callback_data.server_id
+    callback_data.state = NavSubscription.SERVER
+    callback_data.server_id = 0
+    builder.row(
+        back_button(
+            callback_data.pack(),
+            text=_("subscription:button:change_server"),
+        )
+    )
+    callback_data.state = previous_state
+    callback_data.server_id = previous_server_id
+    builder.row(back_button(NavSubscription.MAIN))
+    builder.row(back_to_main_menu_button())
+    return builder.as_markup()
+
+
+def server_keyboard(
+    servers: list["Server"],
+    callback_data: SubscriptionData,
+) -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+    previous_state = callback_data.state
+    previous_server_id = callback_data.server_id
+
+    for server in servers:
+        callback_data.server_id = server.id
+        callback_data.state = NavSubscription.SERVER
+
+        load = f"{server.current_clients}/{server.max_clients}"
+        location = f"{server.location} · " if server.location else ""
+        status = "🟢" if server.current_clients < server.max_clients else "⚠️"
+
+        builder.row(
+            InlineKeyboardButton(
+                text=f"{status} {server.name} | {location}{load}",
+                callback_data=callback_data.pack(),
+            )
+        )
+
+    callback_data.state = previous_state
+    callback_data.server_id = previous_server_id
+
     builder.row(back_button(NavSubscription.MAIN))
     builder.row(back_to_main_menu_button())
     return builder.as_markup()
